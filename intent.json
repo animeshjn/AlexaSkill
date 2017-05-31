@@ -1,0 +1,25 @@
+{
+  "intents": [
+    {
+      "slots": [
+        {
+          "name": "FirstName",
+          "type": "GUST_NAMES"
+        }
+      ],
+      "intent": "HelloIntent"
+    },
+    {
+      "slots": [
+        {
+          "name":"BookTitle",
+          "type":"AMAZON.Book"
+        }
+      ],
+      "intent": "BookIntent"
+    },
+    {
+      "intent":"AMAZON.StopIntent"
+    }
+  ]
+}
