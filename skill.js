@@ -1,9 +1,5 @@
-// This is template files for developing Alexa skills
-
 'use strict';
-
 var winston = require('winston');
-
 var logger = new (winston.Logger)({
     transports: [
       new (winston.transports.Console)({ prettyPrint: true, timestamp: true, json: false, stderrLevels:['error']})
@@ -19,24 +15,17 @@ if(process.env.NODE_DEBUG_EN) {
 
 exports.handler = function (event, context) {
     try {
-
         logger.info('event.session.application.applicationId=' + event.session.application.applicationId);
-
         if (APP_ID !== '' && event.session.application.applicationId !== APP_ID) {
             context.fail('Invalid Application ID');
          }
-      
         if (!event.session.attributes) {
             event.session.attributes = {};
         }
-
         logger.debug('Incoming request:\n', JSON.stringify(event,null,2));
-
         if (event.session.new) {
             onSessionStarted({requestId: event.request.requestId}, event.session);
         }
-
-
         if (event.request.type === 'LaunchRequest') {
             onLaunch(event.request, event.session, new Response(context,event.session));
         } else if (event.request.type === 'IntentRequest') {
@@ -177,7 +166,10 @@ function getError(err) {
 
 //Add your skill application ID from amazon devloper portal
 var APP_ID = 'amzn1.ask.skill.54e41ede-5be5-4ad1-aefe-45aafb687c56';
-
+var https= require('https');
+var Promise=require('bluebird');
+var MAX_READ_FILES=5;
+var MAX_FILES=20;
 function onSessionStarted(sessionStartedRequest, session) {
     logger.debug('onSessionStarted requestId=' + sessionStartedRequest.requestId + ', sessionId=' + session.sessionId);
     // add any session init logic here
@@ -202,23 +194,32 @@ function onLaunch(launchRequest, session, response) {
 
 intentHandlers['HelloIntent'] = function(request,session,response,slots) {
     //Intent logic
-
+    response.speechText="Hello intent has been called";
+    response.shouldEndSession=false;
+    response.done();
 }
 intentHandlers['BookIntent'] = function(request,session,response,slots) {
     //Intent logic
+    listFiles(response, session);
 
 
+    //End book intent
+}
+intentHandlers['YesIntent'] = function(request,session,response,slots) {
+    //Intent logic
+response.speechText="Yes intent has been called";
+response.shouldEndSession=true;
+response.done();
 }
 
-var https= require(https);
-var MAX_READ_FILES=5;
-var MAX_FILES=20;
+
 
 function listFiles(response, session){
     var url;
     url=`https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q="mimeType:application/pdf"`;
     logger.debug(url);
-    https.get(url,function(res){
+
+   https.get(url,function(res){
         var body='';
         res.on('data',function(chunk){
             body+=chunk;
@@ -226,31 +227,102 @@ function listFiles(response, session){
         res.on('end',function(){
             var result= JSON.parse(body);
             var files;
-            if(result.resultSizeEstimate)
-            {
-                response.SpeechText=`There are ${result.resultSizeEstimate} documents.`;
-                response.SpeechText+=`Here are few documents`;
+            if(result){
+            response.speechText=`There are documents.`;
+            var sizes= result.items.length;
+            response.speechText+=`There are ${result.items.length} documents.`;
             }
-            files=result.items;
-            if(files.length>MAX_READ_FILES){
-                session.attributes.files=files.slice(0,MAX_FILES);
-                files=result.files.slice(0,MAX_READ_FILES);
-                session.attributes.offset=MAX_READ_FILES;
-                readFilesFromIds(files,response,session);
-            }
-            else {
-                response.fail(body);
-            }
+            else
+                response.speechText=`Result not available`;
+            response.shouldEndSession=true;
+            response.done();
+           //  if(result.resultSizeEstimate)
+           //  {
+           //      response.speechText=`There are ${result.resultSizeEstimate} documents.`;
+           //      response.speechText+=`Here are few documents`;
+           //      response.shouldEndSession=true;
+           //      response.done();
+           //  }
+           //  files=result.items;
+           //  if(files.length>MAX_READ_FILES){
+           //      session.attributes.files=files.slice(0,MAX_FILES);
+           //      files=result.files.slice(0,MAX_READ_FILES);
+           //      session.attributes.offset=MAX_READ_FILES;
+           //     readFilesFromIds(files,response,session);
+           //  }
+           //  else {
+           //      response.speechText+=body;
+           //      response.shouldEndSession=true;
+           //      response.done();
+           //      //response.fail(body);
+           // }
 
         });
 
     }).on('error',function(e){
-        response.fail(e);
-    });
+        //response.fail(e);
+        response.speechText+=e;
+        response.shouldEndSession=true;
+        response.done();
+   });
 
 }
 
+function readFilesFromIds(files,response,session) {
+    logger.debug(files);
+    var promises= files.map(function(filef){
+        return new Promise(function(resolve,reject){
 
+            getFileFromId(filef.id,session.user.accessToken,function(res,err){
+                var title = res.title.value;
+                filef.result={
+                    title:res.title,
+                    url:res.downloadUrl
+                };
+                resolve();
+            });
+
+        });
+    });
+
+    promises.all(promises).then(function(){
+        files.forEach(function(filef,idx){
+            response.speechText+=`<say-as interpret-as="ordinal">${idx+1}</say-as> Files found with name ${filef.result.title}`
+        });
+        response.shouldEndSession=true;
+        if(session.attributes.offset&&session.attributes.offset>0){
+            response.speechText+="Do you want to continue? ";
+            response.repromptText=" You can say yes or stop. ";
+            response.shouldEndSession=false;
+        }
+        response.done();
+    }).catch(function(err){
+        response.speechText+=err;
+        response.done();
+        //response.fail(err);
+    });
+}
+function getFileFromID(fileId,token,callback){
+    var url=`https://www.googleapis.com/drive/v2/files/${fileId}?access_token=${token}`;
+    https.get(url,function(res){
+        var body='';
+        res.on('data',function(chunk){
+            body+=chunk;
+        });
+
+        res.on('end',function(){
+            logger.debug(body);
+            var result=JSON.parse(body);
+            callback(result);
+        });
+
+    }).on('error',function(e){
+        logger.error("Error Caught: "+e);
+        callback('',err);
+    });
+
+
+}
 
 
 /** For each intent write a intentHandlers

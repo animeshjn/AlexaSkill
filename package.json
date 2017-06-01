@@ -14,6 +14,14 @@
     "morgan": "~1.8.1",
     "serve-favicon": "~2.4.2",
     "googleapis": "",
-    "google-auth-library": ""
+    "google-auth-library": "",
+    "winston": "2.3.1",
+    "bluebird": "",
+    "alexa-skill-kit": "",
+    "cycle": "",
+    "colors": "",
+    "safe": "0.4.3 ",
+    "stack-trace": ""
+
   }
 }
