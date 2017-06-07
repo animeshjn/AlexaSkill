@@ -21,7 +21,9 @@
     "cycle": "",
     "colors": "",
     "safe": "0.4.3 ",
-    "stack-trace": ""
-
+    "stack-trace": "",
+    "pdf-to-text": "0.0.6",
+    "pdftk":"",
+    "lb-pdftk":"0.0.7"
   }
 }

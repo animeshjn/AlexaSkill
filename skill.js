@@ -202,8 +202,10 @@ intentHandlers['HelloIntent'] = function (request, session, response, slots) {
 intentHandlers['BookIntent'] =
     function (request, session, response, slots) {
 //Intent logic
-        if(!slots.BookTitle)
-        listFiles(response, session);
+        if(!slots.BookTitle){
+            session=resetSession(session);
+            listFiles(response, session);}
+
 else {
             response.speechText = "Opening " + slots.BookTitle;
             response.shouldEndSession = true;
@@ -217,11 +219,16 @@ intentHandlers['YesIntent'] = function (request, session, response, slots) {
     response.shouldEndSession = true;
     response.done();
 }
-var limit=10;
+intentHandlers['MoreIntent'] = function (request, session, response, slots) {
+    //Intent logic
+    session.attributes.more=true;
+    listFiles(response, session);
+}
+var limit=5;
 
 function listFiles(response, session) {
     var url;
-    url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}`;
+    url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=mimeType+%3d+%27application%2Fpdf%27`;
     logger.debug(url);
 
     https.get(url, function (res) {
@@ -244,33 +251,53 @@ function listFiles(response, session) {
                     response = result;
                 var count = 0;
                 for (var i = 0, len = item.length; i < len; i++) {
-                    if (item[i].mimeType == 'application/pdf') {
+                   //if (item[i].mimeType == 'application/pdf') {
                         files[count] = item[i].title;
                         count++;
-                    }
+
+                    //}
                 }
-                response.speechText += `There are ${count} documents. `;
+                if (!(session['attributes'].more)) {
+                    response.speechText += `There are ${count} documents. First ${limit} documents are: `;
+                }
+                else if((session['attributes'].more=true)){
+                    response.speechText += `Following are next ${limit} documents. `;
+                }
+                else {
+
+                    response.shouldEndSession=false;
+                    response.done();
+                }
+
 
                 if (!(session['attributes'].start)) {
                     session['attributes']['start'] = 0;
                 }
-
-
-                for (var j = session['attributes']['start']; j <files.length ; j++) {
-                    if(j>limit)
-                        break;
-                    response.speechText += files[j] + ", ";
+                if(!(session['attributes'].searchResults))
+                {
+                    session['attributes']['searchResults'] = files;
                 }
+
+                var j=0;
+                for ( j = session['attributes']['start']; j <files.length ; j++) {
+                    if(j>limit+session['attributes']['start'])
+                        break;
+                    var name=files[j];
+                    name=name.replace(/\.[^/.]+$/, "");
+                    response.speechText += name + ", ";
+                }
+                session['attributes']['start'] = j;
+
                 // files.forEach(function (name) {
                 //     response.speechText += name+ ", ";
                 // });
-                response.speechText += `Which one you would like to open?`;
+                response.speechText += `Which one you would like to open? you can say; More, to hear next ${limit} documents.`;
                 response.shouldEndSession = false;
                 response.done();
 
             }
             else {
-                response.speechText += `No documents found in your drive`;
+                response.speechText += ` No documents found in your drive`;
                 response.shouldEndSession = true;
                 response.done();
             }
@@ -286,6 +313,26 @@ function listFiles(response, session) {
     });
 
 }
+
+
+function readFilesByName(request,response,session,title){
+
+    var url;
+    url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=title+%3d+%27${title}%27`;
+    logger.debug(url);
+
+    https.get(url, function (res) {
+        var body = '';
+        res.on('data', function (chunk) {
+            body += chunk;
+        });
+
+        res.on('end', function () {
+
+        });
+    });
+}
+
 
 function readFilesFromIds(files, response, session) {
     logger.debug(files);
@@ -343,6 +390,12 @@ function getFileFromID(fileId, token, callback) {
 
 }
 
+function resetSession(session){
+    session.attributes.more=false;
+    session.attributes.start=0;
+    session.attributes.searchResults={};
+    return session;
+}
 
 /** For each intent write a intentHandlers
  Example:
