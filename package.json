@@ -24,6 +24,8 @@
     "stack-trace": "",
     "pdf-to-text": "0.0.6",
     "pdftk":"",
-    "lb-pdftk":"0.0.7"
+    "lb-pdftk":"0.0.7",
+    "node-pdfreader":"",
+    "canvas":""
   }
 }
