@@ -228,7 +228,7 @@ var limit=5;
 
 function listFiles(response, session) {
     var url;
-    url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=mimeType+%3d+%27application%2Fpdf%27`;
+    url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=mimeType+%3d+%27text%2Fplain%27`;
     logger.debug(url);
 
     https.get(url, function (res) {
@@ -315,20 +315,23 @@ function listFiles(response, session) {
 }
 
 
-function readFilesByName(request,response,session,title){
+function readBookByName(request,response,session,name)
+{
 
+
+}
+
+
+function readFilesByName(request,response,session,title){
     var url;
     url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=title+%3d+%27${title}%27`;
     logger.debug(url);
-
     https.get(url, function (res) {
         var body = '';
         res.on('data', function (chunk) {
             body += chunk;
         });
-
         res.on('end', function () {
-
         });
     });
 }
