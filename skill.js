@@ -228,6 +228,12 @@ var limit=5;
 
 function listFiles(response, session) {
     var url;
+    if(!(session.user.accessToken))
+    {
+        response.speechText="Seems like your Google Account is not linked properly, please go to; your skills, and Link account in your alexa app."
+        response.shouldEndSession=true;
+        response.done();
+    }
     url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=mimeType+%3d+%27text%2Fplain%27`;
     logger.debug(url);
 

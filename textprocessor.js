@@ -93,28 +93,29 @@ function unitTest()
     function logger(data){
        chapterPhrase=data;
     }
-
    module.exports.getChapterName('./Dracula.txt',1,logger);
+
     module.exports.getAllContent('./Dracula.txt',chapterData);
     function chapterData(content){
         var array=module.exports.contentArray(content);
-        function callback(array){
-           getChapterData(array,chapterPhrase,printData);
-           function printData(index){
-               console.log("chapter data begin");
-               for(var j=index;j<array.length;j++)
-               {
-                  console.log(array[j]);
-               }
-
-
-           }
-
-        }
+        console.log(content);
+        // function callback(array){
+        //    getChapterData(array,chapterPhrase,printData);
+        //    function printData(index){
+        //        console.log("chapter data begin");
+        //        for(var j=index;j<array.length;j++)
+        //        {
+        //           console.log(array[j]);
+        //        }
+        //
+        //
+        //    }
+        //
+        // }
 
     }
 
 
 
 }
-unitTest();
+//unitTest();
