@@ -94,7 +94,6 @@ function unitTest()
        chapterPhrase=data;
     }
    module.exports.getChapterName('./Dracula.txt',1,logger);
-
     module.exports.getAllContent('./Dracula.txt',chapterData);
     function chapterData(content){
         var array=module.exports.contentArray(content);

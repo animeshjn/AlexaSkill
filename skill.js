@@ -162,7 +162,7 @@ function getError(err) {
 }
 
 
-//--------------------------------------------- Skill specific logic starts here ----------------------------------------- 
+//--------------------------------------------- Skill specific logic starts here -----------------------------------------
 
 //Add your skill application ID from amazon devloper portal
 var APP_ID = 'amzn1.ask.skill.54e41ede-5be5-4ad1-aefe-45aafb687c56';
@@ -207,9 +207,10 @@ intentHandlers['BookIntent'] =
             listFiles(response, session);}
 
 else {
-            response.speechText = "Opening " + slots.BookTitle;
-            response.shouldEndSession = true;
-            response.done();
+           // response.speechText = "Opening " + slots.BookTitle;
+            readBookByName(request,response,session,slots.BookTitle);
+            // response.shouldEndSession = true;
+            // response.done();
         }
 
     }
@@ -321,26 +322,34 @@ function listFiles(response, session) {
 }
 
 
-function readBookByName(request,response,session,name)
-{
+function readBookByName(request,response,session,booktitle) {
+ var bookReader=require('bookReadAnimesh/bookReader');
+bookReader.readWholeBook(session.user.accessToken,booktitle,request,response,session,".txt");
+//  function callBack(responseMod){
+//     response=responseMod;
+//     response.done();
+// }
+    // response.speechText+="Opening "+name;
+    // response.shouldEndSession=true;
+    // response.done();
 
 
 }
 
 
-function readFilesByName(request,response,session,title){
-    var url;
-    url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=title+%3d+%27${title}%27`;
-    logger.debug(url);
-    https.get(url, function (res) {
-        var body = '';
-        res.on('data', function (chunk) {
-            body += chunk;
-        });
-        res.on('end', function () {
-        });
-    });
-}
+// function readFilesByName(request,response,session,title){
+//     var url;
+//     url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=title+%3d+%27${title}%27`;
+//     logger.debug(url);
+//     https.get(url, function (res) {
+//         var body = '';
+//         res.on('data', function (chunk) {
+//             body += chunk;
+//         });
+//         res.on('end', function () {
+//         });
+//     });
+// }
 
 
 function readFilesFromIds(files, response, session) {
@@ -410,6 +419,6 @@ function resetSession(session){
  Example:
  intentHandlers['HelloIntent'] = function(request,session,response,slots) {
   //Intent logic
-  
+
 }
  **/

@@ -5,7 +5,15 @@
  * Read contents of a specific book here
  *
  * */
-function getBookUrlByName(accessToken,name,request,response,extension)
+'use-strict';
+let textProcessor= require("bookReadAnimesh/textprocessor");
+let totalLines=0;
+let linesPerPage=10;
+let currentBookId="";
+let booksFound=0;
+let currentLine=0;
+let downloadUrl="";
+function getBookUrlByName(accessToken,name,request,response,extension,callback)
 {
     var url;
     url=`https://www.googleapis.com/drive/v2/files?access_token=${accessToken}&q=title+%3d+%27${name+""+extension}%27`;
@@ -21,10 +29,15 @@ function getBookUrlByName(accessToken,name,request,response,extension)
             var files;
             if (result) {
                 var files = [];
+                booksFound=result['items'].length;
+              // if(booksFound==0){
+              //     return "";
+              // }
                 if (result['items'][0]['id']) {
-                    fileId = result['items'][0]['id'];
+                   currentBookId= result['items'][0]['id'];
+                    console.log(currentBookId);
                 }
-                return result['items'][0]['downloadUrl'];
+               callback(result['items'][0]['downloadUrl']);
                 //console.log(fileId);
                 // download(result['items'][0]['downloadUrl'],contentLogger);
             }
@@ -40,35 +53,67 @@ function getBookUrlByName(accessToken,name,request,response,extension)
  * @param accessToken of the authorized app
  * @returns {string} raw content extracted from file
  */
-function getRawContentFromUrl(url,accessToken){
-    let driveinterface= require('./drive-intertface');
+function getRawContentFromUrl(url,accessToken,callback){
+    let driveinterface= require('bookReadAnimesh/drive-intertface');
     driveinterface.downloadFileContents(url,accessToken,callback);
-    let rawContent="";
-    function callback(content){
-        rawContent=content;
+
+}
+
+function getBookDataByName(accessToken,name,request,response,session,extension,callbackForArray)
+{
+getBookUrlByName(accessToken,name,request,response,extension,callWithUrl);
+function callWithUrl(downloadUrl){
+    console.log(downloadUrl);
+    getRawContentFromUrl(downloadUrl,accessToken,manipulateContent);
+    function manipulateContent(bookText){
+       let contentArray=textProcessor.contentArray(bookText);
+        callbackForArray(contentArray);
     }
 
-    return rawContent;
-}
-
-function getBookDataByName(accessToken,name,request,response,session,extension)
-{
-    let textProcessor= require("./textprocessor");
-let downloadUrl= getBookUrlByName(accessToken,name,request,response,extension);
-let rawContent = getRawContentFromUrl(downloadUrl,accessToken);
-console.log(rawContent);
-
-
-let contentArray;
-
-if(!session.attributes.contentArray){
-contentArray=textProcessor.contentArray(rawContent);
-session.attributes.contentArray=contentArray;
-}
-else {
-    session.attributes.contentArray
 }
 
 
+//console.log(rawContent);
+// let contentArray;
+// if(!session.attributes.contentArray){
+// contentArray=textProcessor.contentArray(rawContent);
+// session.attributes.contentArray=contentArray;
+// }
+// else {
+// contentArray= session.attributes.contentArray;
+// }
+// totalLines=contentArray.length;
+// console.log("Lines in this book: "+totalLines);
+// return contentArray;
+}
 
+//Read Whole book
+module.exports.readWholeBook=function readWholeBook(accessToken,name,request,response,session,extension,sendBack){
+
+    // getBookDataByName(accessToken,name,request,response,session,extension,callbackForArray);
+    // function callbackForArray(arrayText){
+    //     for(let i=0;i<arrayText.length;i++){
+    //            response.speechText+=" "+arrayText[i];
+    //            //currentLine++;
+    //            //session.attributes.currentLine=currentLine;
+    //     }
+    //     response.speechText+="I have finished reading the book, What you want me to do next ?";
+    //     response.shouldEndSession=false;
+    //     response.done();
+    // }
+    response.speechText+="I have finished reading the book, What you want me to do next ?";
+    response.shouldEndSession=false;
+    sendBack(response);
+    // response.done();
+    //   for(let i=0;i<wholeContent.length;i++){
+  //        response.speechText+=" "+wholeContent[i];
+  //       currentLine++;
+  //       session.attributes.currentLine=currentLine;
+  //   }
+
+}
+// resume reading from current line
+
+function setUrl(url){
+    downloadUrl=url;
 }

@@ -6,6 +6,7 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
+    "alexa-sdk": "^1.0.6",
     "body-parser": "~1.17.1",
     "cookie-parser": "~1.4.3",
     "debug": "~2.6.3",
@@ -26,6 +27,9 @@
     "pdftk":"",
     "lb-pdftk":"0.0.7",
     "node-pdfreader":"",
-    "canvas":""
+    "canvas":"",
+    "bookReadAnimesh":"",
+    "google-drive":"",
+    "xmlhttprequest":""
   }
 }

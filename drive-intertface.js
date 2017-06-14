@@ -6,6 +6,7 @@
  * Refer google code content license.
  * @type {()=>resources}
  */
+'use-strict';
 var googleDrive = require('google-drive')
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 var xhr = new XMLHttpRequest();
