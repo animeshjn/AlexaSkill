@@ -180,7 +180,6 @@ function onSessionStarted(sessionStartedRequest, session) {
 function onSessionEnded(sessionEndedRequest, session) {
     logger.debug('onSessionEnded requestId=' + sessionEndedRequest.requestId + ', sessionId=' + session.sessionId);
     // Add any cleanup logic here
-
 }
 
 function onLaunch(launchRequest, session, response) {
@@ -199,6 +198,43 @@ intentHandlers['HelloIntent'] = function (request, session, response, slots) {
     response.shouldEndSession = false;
     response.done();
 }
+intentHandlers['ContinueIntent'] = function (request, session, response, slots){
+   if(session.attributes.currentTitle){
+    var bookTitle= session.attributes.currentTitle;
+    readBookByName(request,response,session,bookTitle);}
+    else{
+       response.speechText+="Which book you want me to open? Say: Open, followed by the book name";
+       response.shouldEndSession=false;
+       response.done();
+    }
+}
+intentHandlers['PreviousPageIntent'] = function (request, session, response, slots){
+    if(session.attributes.currentTitle){
+        var bookTitle= session.attributes.currentTitle;
+        session.attributes.currentLine-=30;
+        response.shouldEndSession =false;
+        readBookByName(request,response,session,bookTitle);
+
+    }
+    else{
+        response.speechText+="Which book you want me to open? Say: Open, followed by the book name";
+        response.shouldEndSession=false;
+        response.done();
+    }
+}
+intentHandlers['SkipPageIntent'] = function (request, session, response, slots){
+    if(session.attributes.currentTitle){
+        var bookTitle= session.attributes.currentTitle;
+        session.attributes.currentLine+=15;
+        response.shouldEndSession =false;
+
+        readBookByName(request,response,session,bookTitle);}
+    else{
+        response.speechText+="Which book you want me to open? Say: Open, followed by the book name";
+        response.shouldEndSession=false;
+        response.done();
+    }
+}
 intentHandlers['BookIntent'] =
     function (request, session, response, slots) {
 //Intent logic
@@ -206,8 +242,12 @@ intentHandlers['BookIntent'] =
             session=resetSession(session);
             listFiles(response, session);}
 
-else {
-           // response.speechText = "Opening " + slots.BookTitle;
+        else {
+            response.speechText += "Opening " + slots.BookTitle+". ";
+            response.speechText+="At any time you can say; skip page, to skip current page and go to next."
+            session.attributes.currentTitle=slots.BookTitle;
+            response.shouldEndSession =false;
+
             readBookByName(request,response,session,slots.BookTitle);
             // response.shouldEndSession = true;
             // response.done();
@@ -325,31 +365,10 @@ function listFiles(response, session) {
 function readBookByName(request,response,session,booktitle) {
  var bookReader=require('bookReadAnimesh/bookReader');
 bookReader.readWholeBook(session.user.accessToken,booktitle,request,response,session,".txt");
-//  function callBack(responseMod){
-//     response=responseMod;
-//     response.done();
-// }
-    // response.speechText+="Opening "+name;
-    // response.shouldEndSession=true;
-    // response.done();
 
 
 }
 
-
-// function readFilesByName(request,response,session,title){
-//     var url;
-//     url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=title+%3d+%27${title}%27`;
-//     logger.debug(url);
-//     https.get(url, function (res) {
-//         var body = '';
-//         res.on('data', function (chunk) {
-//             body += chunk;
-//         });
-//         res.on('end', function () {
-//         });
-//     });
-// }
 
 
 function readFilesFromIds(files, response, session) {
