@@ -1,5 +1,6 @@
 'use strict';
 var winston = require('winston');
+
 var logger = new (winston.Logger)({
     transports: [
         new (winston.transports.Console)({prettyPrint: true, timestamp: true, json: false, stderrLevels: ['error']})
@@ -198,57 +199,60 @@ intentHandlers['HelloIntent'] = function (request, session, response, slots) {
     response.shouldEndSession = false;
     response.done();
 }
-intentHandlers['ContinueIntent'] = function (request, session, response, slots){
-   if(session.attributes.currentTitle){
-    var bookTitle= session.attributes.currentTitle;
-    readBookByName(request,response,session,bookTitle);}
-    else{
-       response.speechText+="Which book you want me to open? Say: Open, followed by the book name";
-       response.shouldEndSession=false;
-       response.done();
+intentHandlers['ContinueIntent'] = function (request, session, response, slots) {
+    if (session.attributes.currentTitle) {
+        var bookTitle = session.attributes.currentTitle;
+        readBookByName(request, response, session, bookTitle);
     }
-}
-intentHandlers['PreviousPageIntent'] = function (request, session, response, slots){
-    if(session.attributes.currentTitle){
-        var bookTitle= session.attributes.currentTitle;
-        session.attributes.currentLine-=30;
-        response.shouldEndSession =false;
-        readBookByName(request,response,session,bookTitle);
-
-    }
-    else{
-        response.speechText+="Which book you want me to open? Say: Open, followed by the book name";
-        response.shouldEndSession=false;
+    else {
+        response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+        response.shouldEndSession = false;
         response.done();
     }
 }
-intentHandlers['SkipPageIntent'] = function (request, session, response, slots){
-    if(session.attributes.currentTitle){
-        var bookTitle= session.attributes.currentTitle;
-        session.attributes.currentLine+=15;
-        response.shouldEndSession =false;
+intentHandlers['PreviousPageIntent'] = function (request, session, response, slots) {
+    if (session.attributes.currentTitle) {
+        var bookTitle = session.attributes.currentTitle;
+        session.attributes.currentLine -= 30;
+        response.shouldEndSession = false;
+        readBookByName(request, response, session, bookTitle);
 
-        readBookByName(request,response,session,bookTitle);}
-    else{
-        response.speechText+="Which book you want me to open? Say: Open, followed by the book name";
-        response.shouldEndSession=false;
+    }
+    else {
+        response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+        response.shouldEndSession = false;
+        response.done();
+    }
+}
+intentHandlers['SkipPageIntent'] = function (request, session, response, slots) {
+    if (session.attributes.currentTitle) {
+        var bookTitle = session.attributes.currentTitle;
+        session.attributes.currentLine += 15;
+        response.shouldEndSession = false;
+
+        readBookByName(request, response, session, bookTitle);
+    }
+    else {
+        response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+        response.shouldEndSession = false;
         response.done();
     }
 }
 intentHandlers['BookIntent'] =
     function (request, session, response, slots) {
 //Intent logic
-        if(!slots.BookTitle){
-            session=resetSession(session);
-            listFiles(response, session);}
+        if (!slots.BookTitle) {
+            session = resetSession(session);
+            listFiles(response, session);
+        }
 
         else {
-            response.speechText += "Opening " + slots.BookTitle+". ";
-            response.speechText+="At any time you can say; skip page, to skip current page and go to next."
-            session.attributes.currentTitle=slots.BookTitle;
-            response.shouldEndSession =false;
+            response.speechText += "Opening " + slots.BookTitle + ". ";
+            response.speechText += "At any time you can say; skip page, to skip current page and go to next."
+            session.attributes.currentTitle = slots.BookTitle;
+            response.shouldEndSession = false;
 
-            readBookByName(request,response,session,slots.BookTitle);
+            readBookByName(request, response, session, slots.BookTitle);
             // response.shouldEndSession = true;
             // response.done();
         }
@@ -256,23 +260,28 @@ intentHandlers['BookIntent'] =
     }
 intentHandlers['YesIntent'] = function (request, session, response, slots) {
     //Intent logic
-    response.speechText = "Yes intent has been called";
-    response.shouldEndSession = true;
-    response.done();
+    var db = require('bookReadAnimesh/DynamoInterface');
+    db.create("4123","newValue in stringified JSON", callback);
+    function callback(data) {
+        response.speechText = "Yes intent has been called";
+        response.speechText += data;
+        response.shouldEndSession = true;
+        response.done();
+    }
 }
+
 intentHandlers['MoreIntent'] = function (request, session, response, slots) {
     //Intent logic
-    session.attributes.more=true;
+    session.attributes.more = true;
     listFiles(response, session);
 }
-var limit=5;
+var limit = 5;
 
 function listFiles(response, session) {
     var url;
-    if(!(session.user.accessToken))
-    {
-        response.speechText="Seems like your Google Account is not linked properly, please go to; your skills, and Link account in your alexa app."
-        response.shouldEndSession=true;
+    if (!(session.user.accessToken)) {
+        response.speechText = "Seems like your Google Account is not linked properly, please go to; your skills, and Link account in your alexa app."
+        response.shouldEndSession = true;
         response.done();
     }
     url = `https://www.googleapis.com/drive/v2/files?access_token=${session.user.accessToken}&q=mimeType+%3d+%27text%2Fplain%27`;
@@ -298,21 +307,21 @@ function listFiles(response, session) {
                     response = result;
                 var count = 0;
                 for (var i = 0, len = item.length; i < len; i++) {
-                   //if (item[i].mimeType == 'application/pdf') {
-                        files[count] = item[i].title;
-                        count++;
+                    //if (item[i].mimeType == 'application/pdf') {
+                    files[count] = item[i].title;
+                    count++;
 
                     //}
                 }
                 if (!(session['attributes'].more)) {
                     response.speechText += `There are ${count} documents. First ${limit} documents are: `;
                 }
-                else if((session['attributes'].more=true)){
+                else if ((session['attributes'].more = true)) {
                     response.speechText += `Following are next ${limit} documents. `;
                 }
                 else {
 
-                    response.shouldEndSession=false;
+                    response.shouldEndSession = false;
                     response.done();
                 }
 
@@ -320,17 +329,16 @@ function listFiles(response, session) {
                 if (!(session['attributes'].start)) {
                     session['attributes']['start'] = 0;
                 }
-                if(!(session['attributes'].searchResults))
-                {
+                if (!(session['attributes'].searchResults)) {
                     session['attributes']['searchResults'] = files;
                 }
 
-                var j=0;
-                for ( j = session['attributes']['start']; j <files.length ; j++) {
-                    if(j>limit+session['attributes']['start'])
+                var j = 0;
+                for (j = session['attributes']['start']; j < files.length; j++) {
+                    if (j > limit + session['attributes']['start'])
                         break;
-                    var name=files[j];
-                    name=name.replace(/\.[^/.]+$/, "");
+                    var name = files[j];
+                    name = name.replace(/\.[^/.]+$/, "");
                     response.speechText += name + ", ";
                 }
                 session['attributes']['start'] = j;
@@ -362,13 +370,10 @@ function listFiles(response, session) {
 }
 
 
-function readBookByName(request,response,session,booktitle) {
- var bookReader=require('bookReadAnimesh/bookReader');
-bookReader.readWholeBook(session.user.accessToken,booktitle,request,response,session,".txt");
-
-
+function readBookByName(request, response, session, booktitle) {
+    var bookReader = require('bookReadAnimesh/bookReader');
+    bookReader.readWholeBook(session.user.accessToken, booktitle, request, response, session, ".txt");
 }
-
 
 
 function readFilesFromIds(files, response, session) {
@@ -405,6 +410,7 @@ function readFilesFromIds(files, response, session) {
         //response.fail(err);
     });
 }
+
 function getFileFromID(fileId, token, callback) {
     var url = `https://www.googleapis.com/drive/v2/files/${fileId}?access_token=${token}`;
     https.get(url, function (res) {
@@ -427,10 +433,10 @@ function getFileFromID(fileId, token, callback) {
 
 }
 
-function resetSession(session){
-    session.attributes.more=false;
-    session.attributes.start=0;
-    session.attributes.searchResults={};
+function resetSession(session) {
+    session.attributes.more = false;
+    session.attributes.start = 0;
+    session.attributes.searchResults = {};
     return session;
 }
 
