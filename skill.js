@@ -174,18 +174,21 @@ var MAX_READ_FILES = 5;
 var MAX_FILES = 20;
 function onSessionStarted(sessionStartedRequest, session) {
     logger.debug('onSessionStarted requestId=' + sessionStartedRequest.requestId + ', sessionId=' + session.sessionId);
-    // add any session init logic here
+
 
 }
 
 function onSessionEnded(sessionEndedRequest, session) {
     logger.debug('onSessionEnded requestId=' + sessionEndedRequest.requestId + ', sessionId=' + session.sessionId);
-    // Add any cleanup logic here
+    // if(!(session.attributes.end)){
+    //    saveSessionToDb
+    // }
+
+
 }
 
 function onLaunch(launchRequest, session, response) {
     logger.debug('onLaunch requestId=' + launchRequest.requestId + ', sessionId=' + session.sessionId);
-
     //response.speechText = 'Welcome msg'
     response.speechText = "Welcome to book reading. You can ask to search your google drive and read books. You can say, list files or read book";
     response.repromptText = "What do you want me to do? You can say read book followed by book name";
@@ -193,12 +196,7 @@ function onLaunch(launchRequest, session, response) {
     response.done();
 }
 
-intentHandlers['HelloIntent'] = function (request, session, response, slots) {
-    //Intent logic
-    response.speechText = "Hello intent has been called";
-    response.shouldEndSession = false;
-    response.done();
-}
+
 intentHandlers['ContinueIntent'] = function (request, session, response, slots) {
     if (session.attributes.currentTitle) {
         var bookTitle = session.attributes.currentTitle;
@@ -225,34 +223,54 @@ intentHandlers['PreviousPageIntent'] = function (request, session, response, slo
     }
 }
 intentHandlers['SkipPageIntent'] = function (request, session, response, slots) {
+
     if (session.attributes.currentTitle) {
         var bookTitle = session.attributes.currentTitle;
         session.attributes.currentLine += 15;
         response.shouldEndSession = false;
-
         readBookByName(request, response, session, bookTitle);
     }
+
     else {
-        response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
-        response.shouldEndSession = false;
-        response.done();
+        var db = require('bookReadAnimesh/DynamoInterface');
+        db.read(session.user.userId,callback);
+    }
+    function callback(value)
+    {
+        if(value.attributes){
+            console.log('session retrieved from db');
+            session=value;
+
+            if (session.attributes.currentTitle) {
+                var bookTitle = session.attributes.currentTitle;
+                session.attributes.currentLine += 15;
+                response.shouldEndSession = false;
+                readBookByName(request, response, session, bookTitle);
+            }
+
+        }else{
+            response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+            response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
+            response.shouldEndSession = false;
+            response.done();
+        }
     }
 }
 intentHandlers['BookIntent'] =
     function (request, session, response, slots) {
 //Intent logic
+
         if (!slots.BookTitle) {
             session = resetSession(session);
             listFiles(response, session);
         }
-
         else {
             response.speechText += "Opening " + slots.BookTitle + ". ";
             response.speechText += "At any time you can say; skip page, to skip current page and go to next."
             session.attributes.currentTitle = slots.BookTitle;
             response.shouldEndSession = false;
-
             readBookByName(request, response, session, slots.BookTitle);
+            //Session from db false
             // response.shouldEndSession = true;
             // response.done();
         }
@@ -261,7 +279,7 @@ intentHandlers['BookIntent'] =
 intentHandlers['YesIntent'] = function (request, session, response, slots) {
     //Intent logic
     var db = require('bookReadAnimesh/DynamoInterface');
-    db.create("4123","newValue in stringified JSON", callback);
+    db.create(session.user.userId,session, callback);
     function callback(data) {
         response.speechText = "Yes intent has been called";
         response.speechText += data;
@@ -369,10 +387,16 @@ function listFiles(response, session) {
 
 }
 
-
 function readBookByName(request, response, session, booktitle) {
     var bookReader = require('bookReadAnimesh/bookReader');
-    bookReader.readWholeBook(session.user.accessToken, booktitle, request, response, session, ".txt");
+    bookReader.readWholeBook(session.user.accessToken, booktitle, request, response, session, ".txt",callback);
+    function callback(sessionMod){
+        var db = require('bookReadAnimesh/DynamoInterface');
+        db.create(session.user.userId,sessionMod,call);
+    }
+    function call(data){
+        console.log('session saved? :'+data);
+    }
 }
 
 
@@ -439,6 +463,7 @@ function resetSession(session) {
     session.attributes.searchResults = {};
     return session;
 }
+
 
 /** For each intent write a intentHandlers
  Example:
