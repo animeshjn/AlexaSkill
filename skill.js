@@ -197,10 +197,15 @@ function onLaunch(launchRequest, session, response) {
 }
 
 
+intentHandlers['TestIntent'] = function (request, session, response, slots) {
+    response.speechText +=
+        response.done();
+}
 intentHandlers['ContinueIntent'] = function (request, session, response, slots) {
     if (session.attributes.currentTitle) {
         var bookTitle = session.attributes.currentTitle;
         readBookByName(request, response, session, bookTitle);
+
     }
     else {
         response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
@@ -214,12 +219,36 @@ intentHandlers['PreviousPageIntent'] = function (request, session, response, slo
         session.attributes.currentLine -= 30;
         response.shouldEndSession = false;
         readBookByName(request, response, session, bookTitle);
-
     }
+
     else {
-        response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
-        response.shouldEndSession = false;
-        response.done();
+        var db = require('bookReadAnimesh/DynamoInterface');
+        db.read(session.user.userId, callback);
+    }
+    function callback(value) {
+
+        if (value.Item) {
+            console.log('session retrieved from db');
+            var accessTokenHold = session.user.accessToken;
+
+            session.attributes = value.Item.session;
+            if (session._session) {
+                session = session._session;
+            }
+            //session.user.accessToken=accessTokenHold;
+            if (session.attributes.currentTitle) {
+                var bookTitle = session.attributes.currentTitle;
+                session.attributes.currentLine -= 30;
+                response.shouldEndSession = false;
+                readBookByName(request, response, session, bookTitle);
+            }
+
+        } else {
+            response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+            response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
+            response.shouldEndSession = false;
+            response.done();
+        }
     }
 }
 intentHandlers['SkipPageIntent'] = function (request, session, response, slots) {
@@ -233,14 +262,18 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
 
     else {
         var db = require('bookReadAnimesh/DynamoInterface');
-        db.read(session.user.userId,callback);
+        db.read(session.user.userId, callback);
     }
-    function callback(value)
-    {
-        if(value.attributes){
-            console.log('session retrieved from db');
-            session=value;
+    function callback(value) {
 
+        if (value.Item) {
+            console.log('session retrieved from db');
+            var accessTokenHold = session.user.accessToken;
+            session.attributes = value.Item.session;
+            if (session._session) {
+                session = session._session;
+            }
+            //session.user.accessToken=accessTokenHold;
             if (session.attributes.currentTitle) {
                 var bookTitle = session.attributes.currentTitle;
                 session.attributes.currentLine += 15;
@@ -248,7 +281,7 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
                 readBookByName(request, response, session, bookTitle);
             }
 
-        }else{
+        } else {
             response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
             response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
             response.shouldEndSession = false;
@@ -259,7 +292,7 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
 intentHandlers['BookIntent'] =
     function (request, session, response, slots) {
 //Intent logic
-
+        var db = require('bookReadAnimesh/DynamoInterface');
         if (!slots.BookTitle) {
             session = resetSession(session);
             listFiles(response, session);
@@ -269,22 +302,75 @@ intentHandlers['BookIntent'] =
             response.speechText += "At any time you can say; skip page, to skip current page and go to next."
             session.attributes.currentTitle = slots.BookTitle;
             response.shouldEndSession = false;
-            readBookByName(request, response, session, slots.BookTitle);
+            db.create(session.user.userId, session.attributes, callback);
             //Session from db false
             // response.shouldEndSession = true;
             // response.done();
         }
 
+        function callback(data) {
+            readBookByName(request, response, session, slots.BookTitle);
+        }
     }
 intentHandlers['YesIntent'] = function (request, session, response, slots) {
     //Intent logic
     var db = require('bookReadAnimesh/DynamoInterface');
-    db.create(session.user.userId,session, callback);
+    db.create(session.user.userId, session.attributes, callback);
     function callback(data) {
         response.speechText = "Yes intent has been called";
         response.speechText += data;
         response.shouldEndSession = true;
         response.done();
+    }
+}
+intentHandlers['SpecificPageIntent'] = function (request, session, response, slots) {
+    var pageNumber = slots.pageNumber;
+    var currentLine = 0;
+    if (pageNumber) {
+        currentLine = pageNumber * 15;
+        if (session.attributes.currentTitle) {
+            var bookTitle = session.attributes.currentTitle;
+            session.attributes.currentLine = currentLine;
+            response.shouldEndSession = false;
+            readBookByName(request, response, session, bookTitle);
+        }
+
+        else {
+            var db = require('bookReadAnimesh/DynamoInterface');
+            db.read(session.user.userId, callback);
+        }
+    } else {
+        response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+        response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
+        response.shouldEndSession = false;
+        response.done();
+    }
+
+
+    function callback(value) {
+
+        if (value.Item) {
+            console.log('session retrieved from db');
+            var accessTokenHold = session.user.accessToken;
+
+            session.attributes = value.Item.session;
+            if (session._session) {
+                session = session._session;
+            }
+            //   session.user.accessToken=accessTokenHold;
+            if (session.attributes.currentTitle) {
+                var bookTitle = session.attributes.currentTitle;
+                session.attributes.currentLine = currentLine;
+                response.shouldEndSession = false;
+                readBookByName(request, response, session, bookTitle);
+            }
+
+        } else {
+            response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+            response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
+            response.shouldEndSession = false;
+            response.done();
+        }
     }
 }
 
@@ -293,6 +379,91 @@ intentHandlers['MoreIntent'] = function (request, session, response, slots) {
     session.attributes.more = true;
     listFiles(response, session);
 }
+
+
+intentHandlers['ChapterIntent'] = function (request, session, response, slots) {
+
+    if (session.attributes.currentTitle) {
+        if (slots.chapterNumber) {
+            readFromChapter(slots.chapterNumber, session.attributes.currentTitle, request, session, response);
+        }
+        else {
+            response.speechText = "Which chapter you want me to open? Say, go to chapter followed by the chapter number";
+            response.repromptText = "Which chapter you want me to open? Say, go to chapter followed by the chapter number";
+            response.shouldEndSession = false;
+            response.done();
+        }
+    }
+    else {
+        response.speechText = "Which book do you want me to open? Say, Open, followed by the book name";
+        response.repromptText = "Which book do you want me to open? Say, Open, followed by the book name";
+        response.shouldEndSession = false;
+        response.done();
+    }
+}
+
+intentHandlers['SkipMultipleIntent'] = function (request, session, response, slots) {
+    var lineNum = 1;
+    var currentPageNumber = 1;
+    var skips = 0;
+    var pageNumber;
+    if (session.attributes.currentTitle) {
+        if (session.attributes.currentLine) {
+            lineNum = session.attributes.currentLine;
+            currentPageNumber = Math.ceil(lineNum / 15);
+        }
+
+    if (slots.pageValue) {
+        skips = slots.pageValue;
+        pageNumber = skips +currentPageNumber;
+    //go to pageNumber
+        lineNum = pageNumber * 15;
+        var bookTitle = session.attributes.currentTitle;
+        session.attributes.currentLine = lineNum;
+        response.shouldEndSession = false;
+        readBookByName(request, response, session, bookTitle);
+    }
+    else {
+        response.speechText += "Which page do you want me to navigate? say go to page followed by the page number";
+        response.repromptText = "Which page do you want me to navigate? say go to page followed by the page number";
+        response.shouldEndSession = false;
+        response.done();
+    }
+
+    }
+    else {
+        var db = require('bookReadAnimesh/DynamoInterface');
+        db.read(session.user.userId, callback);
+    }
+    function callback(value) {
+
+        if (value.Item) {
+            console.log('session retrieved from db');
+            var accessTokenHold = session.user.accessToken;
+
+            session.attributes = value.Item.session;
+            if (session._session) {
+                session = session._session;
+            }
+            //   session.user.accessToken=accessTokenHold;
+            if (session.attributes.currentTitle) {
+                var bookTitle = session.attributes.currentTitle;
+                session.attributes.currentLine = lineNum;
+                response.shouldEndSession = false;
+                readBookByName(request, response, session, bookTitle);
+            }
+
+        } else {
+            response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+            response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
+            response.shouldEndSession = false;
+            response.done();
+        }
+    }
+
+
+}
+
 var limit = 5;
 
 function listFiles(response, session) {
@@ -386,19 +557,30 @@ function listFiles(response, session) {
     });
 
 }
-
 function readBookByName(request, response, session, booktitle) {
     var bookReader = require('bookReadAnimesh/bookReader');
-    bookReader.readWholeBook(session.user.accessToken, booktitle, request, response, session, ".txt",callback);
-    function callback(sessionMod){
+    bookReader.readWholeBook(session.user.accessToken, booktitle, request, response, session, ".txt", callback);
+    function callback(sessionMod) {
         var db = require('bookReadAnimesh/DynamoInterface');
-        db.create(session.user.userId,sessionMod,call);
+        db.create(session.user.userId, session.attributes, call);
     }
-    function call(data){
-        console.log('session saved? :'+data);
+
+    function call(data) {
+        console.log('session saved? :' + data);
     }
 }
+function readFromChapter(chapterNumber, bookTitle, request, session, response) {
+    var bookReader = require('bookReadAnimesh/bookReader');
+    bookReader.readFromChapter(chapterNumber, session.user.accessToken, bookTitle, request, response, session, ".txt", callback);
+    function callback(sessionMod) {
+        var db = require('bookReadAnimesh/DynamoInterface');
+        db.create(session.user.userId, session.attributes, call);
+    }
 
+    function call(data) {
+        console.log('session saved? :' + data);
+    }
+}
 
 function readFilesFromIds(files, response, session) {
     logger.debug(files);

@@ -3,26 +3,41 @@
     {
       "slots": [
         {
-          "name": "FirstName",
-          "type": "GUST_NAMES"
-        }
-      ],
-      "intent": "HelloIntent"
-    },
-    {
-      "slots": [
-        {
-          "name":"BookTitle",
-          "type":"AMAZON.Book"
+          "name": "BookTitle",
+          "type": "AMAZON.Book"
         }
       ],
       "intent": "BookIntent"
     },
     {
-      "intent":"AMAZON.StopIntent"
-    }
-    , {
-      "intent":"AMAZON.YesIntent"
+      "intent": "AMAZON.StopIntent"
+    },
+    {
+      "intent": "YesIntent"
+    },
+    {
+      "intent": "MoreIntent"
+    },
+    {
+      "intent": "NextPageIntent"
+    },
+    {
+      "intent": "SkipPageIntent"
+    },
+    {
+      "intent": "PreviousPageIntent"
+    },
+    {
+      "intent": "ContinueIntent"
+    },
+    {"slots": [
+      {
+        "name": "pageNumber",
+        "type": "AMAZON.NUMBER"
+      }
+    ],
+
+      "intent": "SpecificPageIntent"
     }
   ]
 }
