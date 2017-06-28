@@ -36,7 +36,7 @@ exports.getChapterName = function getChapterName(contentData, chapterNumber, cal
 exports.contentArray = contents => {
     var canonicalContent = contents;
     //canonicalContent=canonicalContent.replace(/("|')/g, '\"');
-    canonicalContent = canonicalContent.replace(/(\r)/g, '\n');
+    canonicalContent = canonicalContent.replace(/(\r)/g, '');
     canonicalContent = canonicalContent.replace(/&/g, 'and');
     canonicalContent = canonicalContent.replace(/\uFFFD/g, '');
     var wholeContentArray = canonicalContent.split('\n');
@@ -87,6 +87,7 @@ exports.getChapterDataStartIndex=function getChapterDataStartIndex(chaptersArray
             }
         }
     }
+
 }
 function getContentsEndIndex(chaptersArray, chapterPhrase) {
     var counter = 0;
@@ -104,20 +105,24 @@ function getContentsEndIndex(chaptersArray, chapterPhrase) {
 
 function unitTest() {
     var chapterPhrase = "";
+
+    function logger(data) {
+        chapterPhrase = data;
+        console.log(data);
+
+    }
+
+
     module.exports.getAllContent('./Dracula.txt', chapterData);
     function chapterData(content) {
-        module.exports.getChapterName(content, 6, logger);
-        function logger(data) {
-            var array = module.exports.contentArray(content);
-            chapterPhrase = data;
-            console.log(data);
-            module.exports.getChapterDataStartIndex(array, chapterPhrase, call);
-        }
-
+        module.exports.getChapterName(content, 7, logger);
+        var array = module.exports.contentArray(content);
+        module.exports.getChapterDataStartIndex(array, chapterPhrase, call);
     }
     function call(array,index) {
         console.log(index);
     }
+
     //      console.log(content);
     //      // function callback(array){
     //      //    getChapterData(array,chapterPhrase,printData);
@@ -137,4 +142,4 @@ function unitTest() {
 
 
 }
-unitTest();
+//unitTest();

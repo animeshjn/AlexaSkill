@@ -34,8 +34,8 @@ exports.handler = function (event, context) {
             if (event.request.intent.name in intentHandlers) {
                 intentHandlers[event.request.intent.name](event.request, event.session, response, getSlots(event.request));
             } else {
-                response.speechText = 'Unknown intent';
-                response.shouldEndSession = true;
+                response.speechText = 'I am sorry, I did not get it.';
+                response.shouldEndSession = false;
                 response.done();
             }
         } else if (event.request.type === 'SessionEndedRequest') {
@@ -172,6 +172,7 @@ var Promise = require('bluebird');
 //var l=require('./list-files-response-function.js')
 var MAX_READ_FILES = 5;
 var MAX_FILES = 20;
+var LINES=14;
 function onSessionStarted(sessionStartedRequest, session) {
     logger.debug('onSessionStarted requestId=' + sessionStartedRequest.requestId + ', sessionId=' + session.sessionId);
 
@@ -198,8 +199,13 @@ function onLaunch(launchRequest, session, response) {
 
 
 intentHandlers['TestIntent'] = function (request, session, response, slots) {
-    response.speechText +=
+    response.speechText +="";
         response.done();
+}
+intentHandlers['AMAZON.StopIntent'] = function (request, session, response, slots) {
+    //saveSession(session);
+    response.speechText +="Ok."
+    response.done();
 }
 intentHandlers['ContinueIntent'] = function (request, session, response, slots) {
     if (session.attributes.currentTitle) {
@@ -213,10 +219,21 @@ intentHandlers['ContinueIntent'] = function (request, session, response, slots) 
         response.done();
     }
 }
+intentHandlers['AMAZON.HelpIntent'] = function (request, session, response, slots) {
+    response.speechText += "To list all files, say: list files. ";
+    response.speechText += "To Read a book say; Read, followed by the book name, for example: Open Dracula or Read Harry potter. ";
+    response.speechText += "To go to next page, you can interrupt and say next page. ";
+    response.speechText += "To go to a certain page, say, go to, or jump to, followed by the page number. ";
+    response.speechText += "To go to a certain chapter, say, go to, or jump to, followed by the chapter number. ";
+    response.speechText += `Your books should be in the accessible format provided by <say-as interpret-as="spell-out">AIMVA</say-as>. `;
+    response.speechText += "What do you want me to do?";
+    response.shouldEndSession = false;
+    response.done();
+}
 intentHandlers['PreviousPageIntent'] = function (request, session, response, slots) {
     if (session.attributes.currentTitle) {
         var bookTitle = session.attributes.currentTitle;
-        session.attributes.currentLine -= 30;
+        session.attributes.currentLine -= LINES*2;
         response.shouldEndSession = false;
         readBookByName(request, response, session, bookTitle);
     }
@@ -238,7 +255,7 @@ intentHandlers['PreviousPageIntent'] = function (request, session, response, slo
             //session.user.accessToken=accessTokenHold;
             if (session.attributes.currentTitle) {
                 var bookTitle = session.attributes.currentTitle;
-                session.attributes.currentLine -= 30;
+                session.attributes.currentLine -= LINES*2;
                 response.shouldEndSession = false;
                 readBookByName(request, response, session, bookTitle);
             }
@@ -255,7 +272,7 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
 
     if (session.attributes.currentTitle) {
         var bookTitle = session.attributes.currentTitle;
-        session.attributes.currentLine += 15;
+        session.attributes.currentLine += LINES;
         response.shouldEndSession = false;
         readBookByName(request, response, session, bookTitle);
     }
@@ -276,7 +293,7 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
             //session.user.accessToken=accessTokenHold;
             if (session.attributes.currentTitle) {
                 var bookTitle = session.attributes.currentTitle;
-                session.attributes.currentLine += 15;
+                session.attributes.currentLine += LINES;
                 response.shouldEndSession = false;
                 readBookByName(request, response, session, bookTitle);
             }
@@ -298,8 +315,8 @@ intentHandlers['BookIntent'] =
             listFiles(response, session);
         }
         else {
-            response.speechText += "Opening " + slots.BookTitle + ". ";
-            response.speechText += "At any time you can say; skip page, to skip current page and go to next."
+            response.speechText += "Looking for " + slots.BookTitle + ". ";
+            //response.speechText += "At any time you can say; skip page, to skip current page and go to next. "
             session.attributes.currentTitle = slots.BookTitle;
             response.shouldEndSession = false;
             db.create(session.user.userId, session.attributes, callback);
@@ -327,7 +344,7 @@ intentHandlers['SpecificPageIntent'] = function (request, session, response, slo
     var pageNumber = slots.pageNumber;
     var currentLine = 0;
     if (pageNumber) {
-        currentLine = pageNumber * 15;
+        currentLine = pageNumber * LINES;
         if (session.attributes.currentTitle) {
             var bookTitle = session.attributes.currentTitle;
             session.attributes.currentLine = currentLine;
@@ -410,14 +427,14 @@ intentHandlers['SkipMultipleIntent'] = function (request, session, response, slo
     if (session.attributes.currentTitle) {
         if (session.attributes.currentLine) {
             lineNum = session.attributes.currentLine;
-            currentPageNumber = Math.ceil(lineNum / 15);
+            currentPageNumber = Math.ceil(lineNum / LINES);
         }
 
     if (slots.pageValue) {
         skips = slots.pageValue;
         pageNumber = skips +currentPageNumber;
     //go to pageNumber
-        lineNum = pageNumber * 15;
+        lineNum = pageNumber * LINES;
         var bookTitle = session.attributes.currentTitle;
         session.attributes.currentLine = lineNum;
         response.shouldEndSession = false;
