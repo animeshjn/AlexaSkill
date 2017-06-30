@@ -36,9 +36,9 @@ exports.getChapterName = function getChapterName(contentData, chapterNumber, cal
 exports.contentArray = contents => {
     var canonicalContent = contents;
     //canonicalContent=canonicalContent.replace(/("|')/g, '\"');
-    canonicalContent = canonicalContent.replace(/(\r)/g, '');
+    //canonicalContent = canonicalContent.replace(/(\r)/g, '');
     canonicalContent = canonicalContent.replace(/&/g, 'and');
-    canonicalContent = canonicalContent.replace(/\uFFFD/g, '');
+    canonicalContent = canonicalContent.replace(/[^a-zA-Z 0-9 \n '' ' . " , ; : ? !]+/g, '');
     var wholeContentArray = canonicalContent.split('\n');
     //console.log(wholeContentArray[72]);
     return wholeContentArray;
@@ -73,6 +73,7 @@ function getChapterData(chaptersArray, chapterPhrase, callback) {
 
 exports.getChapterDataStartIndex=function getChapterDataStartIndex(chaptersArray, chapterPhrase, callback) {
     var contentsEndIndex = getContentsEndIndex(chaptersArray, contentEnd);
+    var flag= false;
     for (var i = contentsEndIndex; i < chaptersArray.length; i++) {
         var phrase = chapterPhrase;
         var dotProcessed = phrase.replace(".", "[.]");
@@ -83,9 +84,13 @@ exports.getChapterDataStartIndex=function getChapterDataStartIndex(chaptersArray
                 console.log("Chapter detected");
                 console.log("chapter start index:"+i);
                 callback(chaptersArray,i);
+                flag=true;
                 break;
             }
         }
+    }
+    if(!flag){
+        callback();
     }
 
 }
@@ -105,22 +110,26 @@ function getContentsEndIndex(chaptersArray, chapterPhrase) {
 
 function unitTest() {
     var chapterPhrase = "";
-
+    var maxChapters=12;
+    var chapterNumber;
     function logger(data) {
         chapterPhrase = data;
         console.log(data);
 
     }
-
-
     module.exports.getAllContent('./Dracula.txt', chapterData);
     function chapterData(content) {
-        module.exports.getChapterName(content, 7, logger);
+        module.exports.getChapterName(content, 1, logger);
         var array = module.exports.contentArray(content);
-        module.exports.getChapterDataStartIndex(array, chapterPhrase, call);
+        for(var i=0;i<array.length;i++)
+        {
+            console.log(array[i]);
+        }
+
+        exports.getChapterDataStartIndex(array, chapterPhrase, call);
     }
     function call(array,index) {
-        console.log(index);
+     //   console.log(JSON.stringify(array));
     }
 
     //      console.log(content);
@@ -142,4 +151,4 @@ function unitTest() {
 
 
 }
-//unitTest();
+unitTest();

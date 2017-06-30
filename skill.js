@@ -172,7 +172,7 @@ var Promise = require('bluebird');
 //var l=require('./list-files-response-function.js')
 var MAX_READ_FILES = 5;
 var MAX_FILES = 20;
-var LINES=14;
+var LINES=8;
 function onSessionStarted(sessionStartedRequest, session) {
     logger.debug('onSessionStarted requestId=' + sessionStartedRequest.requestId + ', sessionId=' + session.sessionId);
 
