@@ -8,6 +8,8 @@ var logger = new (winston.Logger)({
 });
 
 var intentHandlers = {};
+var speeds = {1: "\'x-slow\'", 2: "\'slow\'", 3: "\'medium\'", 4: "\'fast\'", 5: "\'x-fast\'"};
+var s = 3;
 
 if (process.env.NODE_DEBUG_EN) {
     logger.level = 'debug';
@@ -172,11 +174,9 @@ var Promise = require('bluebird');
 //var l=require('./list-files-response-function.js')
 var MAX_READ_FILES = 5;
 var MAX_FILES = 20;
-var LINES=8;
+var LINES = 8;
 function onSessionStarted(sessionStartedRequest, session) {
     logger.debug('onSessionStarted requestId=' + sessionStartedRequest.requestId + ', sessionId=' + session.sessionId);
-
-
 }
 
 function onSessionEnded(sessionEndedRequest, session) {
@@ -184,14 +184,12 @@ function onSessionEnded(sessionEndedRequest, session) {
     // if(!(session.attributes.end)){
     //    saveSessionToDb
     // }
-
-
 }
 
 function onLaunch(launchRequest, session, response) {
     logger.debug('onLaunch requestId=' + launchRequest.requestId + ', sessionId=' + session.sessionId);
     //response.speechText = 'Welcome msg'
-    response.speechText = "Welcome to book reading. You can ask to search your google drive and read books. You can say, list files or read book";
+    response.speechText = "Welcome to book reading. You can ask to search your google drive and read books. You can say, list files or read book. Say, Help, for more. ";
     response.repromptText = "What do you want me to do? You can say read book followed by book name";
     response.shouldEndSession = false;
     response.done();
@@ -199,18 +197,26 @@ function onLaunch(launchRequest, session, response) {
 
 
 intentHandlers['TestIntent'] = function (request, session, response, slots) {
-    response.speechText +="";
-        response.done();
+    response.speechText += "";
+    response.done();
 }
 intentHandlers['AMAZON.StopIntent'] = function (request, session, response, slots) {
     //saveSession(session);
-    response.speechText +="Ok."
+    response.speechText += "Ok."
     response.done();
 }
 intentHandlers['ContinueIntent'] = function (request, session, response, slots) {
     if (session.attributes.currentTitle) {
         var bookTitle = session.attributes.currentTitle;
-        readBookByName(request, response, session, bookTitle);
+        if (session.attributes.speed) {
+            s = session.attributes.speed;
+        }
+        else {
+            session.attributes.speed = s;
+        }
+        session.attributes.speed = s;
+        var speedValue = speeds[s];
+        readBookByName(request, response, session, bookTitle,speedValue);
 
     }
     else {
@@ -225,6 +231,8 @@ intentHandlers['AMAZON.HelpIntent'] = function (request, session, response, slot
     response.speechText += "To go to next page, you can interrupt and say next page. ";
     response.speechText += "To go to a certain page, say, go to, or jump to, followed by the page number. ";
     response.speechText += "To go to a certain chapter, say, go to, or jump to, followed by the chapter number. ";
+    response.speechText += "If you want me to read slower, say, read slower. ";
+    response.speechText += "If you want me to read faster, say, read faster. ";
     response.speechText += `Your books should be in the accessible format provided by <say-as interpret-as="spell-out">AIMVA</say-as>. `;
     response.speechText += "What do you want me to do?";
     response.shouldEndSession = false;
@@ -233,7 +241,7 @@ intentHandlers['AMAZON.HelpIntent'] = function (request, session, response, slot
 intentHandlers['PreviousPageIntent'] = function (request, session, response, slots) {
     if (session.attributes.currentTitle) {
         var bookTitle = session.attributes.currentTitle;
-        session.attributes.currentLine -= LINES*2;
+        session.attributes.currentLine -= LINES * 2;
         response.shouldEndSession = false;
         readBookByName(request, response, session, bookTitle);
     }
@@ -255,9 +263,17 @@ intentHandlers['PreviousPageIntent'] = function (request, session, response, slo
             //session.user.accessToken=accessTokenHold;
             if (session.attributes.currentTitle) {
                 var bookTitle = session.attributes.currentTitle;
-                session.attributes.currentLine -= LINES*2;
+                session.attributes.currentLine -= LINES * 2;
                 response.shouldEndSession = false;
-                readBookByName(request, response, session, bookTitle);
+                if (session.attributes.speed) {
+                    s = session.attributes.speed;
+                }
+                else {
+                    session.attributes.speed = s;
+                }
+                session.attributes.speed = s;
+                var speedValue = speeds[s];
+                readBookByName(request, response, session, bookTitle,speedValue);
             }
 
         } else {
@@ -274,7 +290,15 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
         var bookTitle = session.attributes.currentTitle;
         session.attributes.currentLine += LINES;
         response.shouldEndSession = false;
-        readBookByName(request, response, session, bookTitle);
+        if (session.attributes.speed) {
+            s = session.attributes.speed;
+        }
+        else {
+            session.attributes.speed = s;
+        }
+        session.attributes.speed = s;
+        var speedValue = speeds[s];
+        readBookByName(request, response, session, bookTitle,speedValue);
     }
 
     else {
@@ -295,7 +319,15 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
                 var bookTitle = session.attributes.currentTitle;
                 session.attributes.currentLine += LINES;
                 response.shouldEndSession = false;
-                readBookByName(request, response, session, bookTitle);
+                if (session.attributes.speed) {
+                    s = session.attributes.speed;
+                }
+                else {
+                    session.attributes.speed = s;
+                }
+                session.attributes.speed = s;
+                var speedValue = speeds[s];
+                readBookByName(request, response, session, bookTitle,speedValue);
             }
 
         } else {
@@ -306,37 +338,42 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
         }
     }
 }
-intentHandlers['BookIntent'] =
-    function (request, session, response, slots) {
+intentHandlers['BookIntent'] = function (request, session, response, slots) {
 //Intent logic
-        var db = require('bookReadAnimesh/DynamoInterface');
-        if (!slots.BookTitle) {
-            session = resetSession(session);
-            listFiles(response, session);
+    var db = require('bookReadAnimesh/DynamoInterface');
+    if (!slots.BookTitle) {
+        session = resetSession(session);
+        listFiles(response, session);
+    }
+    else {
+        response.speechText += "Looking for " + slots.BookTitle + ". ";
+        //response.speechText += "At any time you can say; skip page, to skip current page and go to next. "
+        session.attributes.currentTitle = slots.BookTitle;
+        response.shouldEndSession = false;
+        db.create(session.user.userId, session.attributes, callback);
+        //Session from db false
+        // response.shouldEndSession = true;
+        // response.done();
+    }
+
+    function callback(data) {
+        if (session.attributes.speed) {
+            s = session.attributes.speed;
         }
         else {
-            response.speechText += "Looking for " + slots.BookTitle + ". ";
-            //response.speechText += "At any time you can say; skip page, to skip current page and go to next. "
-            session.attributes.currentTitle = slots.BookTitle;
-            response.shouldEndSession = false;
-            db.create(session.user.userId, session.attributes, callback);
-            //Session from db false
-            // response.shouldEndSession = true;
-            // response.done();
+            session.attributes.speed = s;
         }
-
-        function callback(data) {
-            readBookByName(request, response, session, slots.BookTitle);
-        }
+        session.attributes.speed = s;
+        var speedValue = speeds[s];
+        readBookByName(request, response, session, slots.BookTitle,speedValue);
     }
+}
 intentHandlers['YesIntent'] = function (request, session, response, slots) {
     //Intent logic
     var db = require('bookReadAnimesh/DynamoInterface');
     db.create(session.user.userId, session.attributes, callback);
     function callback(data) {
-        response.speechText = "Yes intent has been called";
-        response.speechText += data;
-        response.shouldEndSession = true;
+        response.shouldEndSession = false;
         response.done();
     }
 }
@@ -349,7 +386,15 @@ intentHandlers['SpecificPageIntent'] = function (request, session, response, slo
             var bookTitle = session.attributes.currentTitle;
             session.attributes.currentLine = currentLine;
             response.shouldEndSession = false;
-            readBookByName(request, response, session, bookTitle);
+            if (session.attributes.speed) {
+                s = session.attributes.speed;
+            }
+            else {
+                session.attributes.speed = s;
+            }
+            session.attributes.speed = s;
+            var speedValue = speeds[s];
+            readBookByName(request, response, session, bookTitle,speedValue);
         }
 
         else {
@@ -369,7 +414,6 @@ intentHandlers['SpecificPageIntent'] = function (request, session, response, slo
         if (value.Item) {
             console.log('session retrieved from db');
             var accessTokenHold = session.user.accessToken;
-
             session.attributes = value.Item.session;
             if (session._session) {
                 session = session._session;
@@ -379,7 +423,15 @@ intentHandlers['SpecificPageIntent'] = function (request, session, response, slo
                 var bookTitle = session.attributes.currentTitle;
                 session.attributes.currentLine = currentLine;
                 response.shouldEndSession = false;
-                readBookByName(request, response, session, bookTitle);
+                if (session.attributes.speed) {
+                    s = session.attributes.speed;
+                }
+                else {
+                    session.attributes.speed = s;
+                }
+                session.attributes.speed = s;
+                var speedValue = speeds[s];
+                readBookByName(request, response, session, bookTitle,speedValue);
             }
 
         } else {
@@ -396,13 +448,19 @@ intentHandlers['MoreIntent'] = function (request, session, response, slots) {
     session.attributes.more = true;
     listFiles(response, session);
 }
-
-
 intentHandlers['ChapterIntent'] = function (request, session, response, slots) {
 
     if (session.attributes.currentTitle) {
         if (slots.chapterNumber) {
-            readFromChapter(slots.chapterNumber, session.attributes.currentTitle, request, session, response);
+            if (session.attributes.speed) {
+                s = session.attributes.speed;
+            }
+            else {
+                session.attributes.speed = s;
+            }
+            session.attributes.speed = s;
+            var speedValue = speeds[s];
+            readFromChapter(slots.chapterNumber, session.attributes.currentTitle, request, session, response, speedValue);
         }
         else {
             response.speechText = "Which chapter you want me to open? Say, go to chapter followed by the chapter number";
@@ -418,7 +476,50 @@ intentHandlers['ChapterIntent'] = function (request, session, response, slots) {
         response.done();
     }
 }
-
+intentHandlers['SlowerIntent'] = function (request, session, response, slots) {
+    if (session.attributes.currentTitle) {
+        var bookTitle = session.attributes.currentTitle;
+        if (session.attributes.speed) {
+            s = session.attributes.speed;
+        }
+        else {
+            session.attributes.speed = s;
+        }
+        if(s>1)
+        s--;
+        session.attributes.speed = s;
+        var speedValue = speeds[s];
+        response.speechText+=`<prosody speed='${speedValue}'>Reading at ${speedValue} speed. </prosody>`;
+        readBookByName(request, response, session, bookTitle, speedValue);
+    }
+    else {
+        response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+        response.shouldEndSession = false;
+        response.done();
+    }
+}
+intentHandlers['FasterIntent'] = function (request, session, response, slots) {
+    if (session.attributes.currentTitle) {
+        var bookTitle = session.attributes.currentTitle;
+        if (session.attributes.speed) {
+            s = session.attributes.speed;
+        }
+        else {
+            session.attributes.speed = s;
+        }
+        if(s<5)
+            s++;
+        session.attributes.speed = s;
+        var speedValue = speeds[s];
+        response.speechText+=`<prosody speed='${speedValue}'>Reading at ${speedValue} speed. </prosody>`;
+        readBookByName(request, response, session, bookTitle, speedValue);
+    }
+    else {
+        response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+        response.shouldEndSession = false;
+        response.done();
+    }
+}
 intentHandlers['SkipMultipleIntent'] = function (request, session, response, slots) {
     var lineNum = 1;
     var currentPageNumber = 1;
@@ -430,22 +531,31 @@ intentHandlers['SkipMultipleIntent'] = function (request, session, response, slo
             currentPageNumber = Math.ceil(lineNum / LINES);
         }
 
-    if (slots.pageValue) {
-        skips = slots.pageValue;
-        pageNumber = skips +currentPageNumber;
-    //go to pageNumber
-        lineNum = pageNumber * LINES;
-        var bookTitle = session.attributes.currentTitle;
-        session.attributes.currentLine = lineNum;
-        response.shouldEndSession = false;
-        readBookByName(request, response, session, bookTitle);
-    }
-    else {
-        response.speechText += "Which page do you want me to navigate? say go to page followed by the page number";
-        response.repromptText = "Which page do you want me to navigate? say go to page followed by the page number";
-        response.shouldEndSession = false;
-        response.done();
-    }
+        if (slots.pageValue) {
+            skips = slots.pageValue;
+            pageNumber = skips + currentPageNumber;
+            //go to pageNumber
+            lineNum = pageNumber * LINES;
+            var bookTitle = session.attributes.currentTitle;
+            session.attributes.currentLine = lineNum;
+            response.shouldEndSession = false;
+            if (session.attributes.speed) {
+                s = session.attributes.speed;
+            }
+            else {
+                session.attributes.speed = s;
+            }
+
+            session.attributes.speed = s;
+            var speedValue = speeds[s];
+            readBookByName(request, response, session, bookTitle,speedValue);
+        }
+        else {
+            response.speechText += "Which page do you want me to navigate? say go to page followed by the page number";
+            response.repromptText = "Which page do you want me to navigate? say go to page followed by the page number";
+            response.shouldEndSession = false;
+            response.done();
+        }
 
     }
     else {
@@ -481,6 +591,129 @@ intentHandlers['SkipMultipleIntent'] = function (request, session, response, slo
 
 }
 
+intentHandlers['SkipParagraph'] = function (request, session, response, slots) {
+    var lineNum = 1;
+    var currentPageNumber = 1;
+    var skips = 0;
+    var pageNumber;
+    if (session.attributes.currentTitle) {
+        if (session.attributes.currentLine) {
+            lineNum = session.attributes.currentLine;
+            currentPageNumber = Math.ceil(lineNum / LINES);
+        }
+            //skip few pages
+            lineNum += 4;
+            var bookTitle = session.attributes.currentTitle;
+            session.attributes.currentLine = lineNum;
+            response.shouldEndSession = false;
+            if (session.attributes.speed) {
+                s = session.attributes.speed;
+            }
+            else {
+                session.attributes.speed = s;
+            }
+
+            session.attributes.speed = s;
+            var speedValue = speeds[s];
+            readBookByName(request, response, session, bookTitle,speedValue);
+
+
+
+    }
+    else {
+        var db = require('bookReadAnimesh/DynamoInterface');
+        db.read(session.user.userId, callback);
+    }
+    function callback(value) {
+
+        if (value.Item) {
+            console.log('session retrieved from db');
+            var accessTokenHold = session.user.accessToken;
+
+            session.attributes = value.Item.session;
+            if (session._session) {
+                session = session._session;
+            }
+            //   session.user.accessToken=accessTokenHold;
+            if (session.attributes.currentTitle) {
+                var bookTitle = session.attributes.currentTitle;
+                session.attributes.currentLine = lineNum;
+                response.shouldEndSession = false;
+                readBookByName(request, response, session, bookTitle);
+            }
+
+        } else {
+            response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+            response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
+            response.shouldEndSession = false;
+            response.done();
+        }
+    }
+
+
+}
+
+intentHandlers['RepeatParagraph'] = function (request, session, response, slots) {
+    var lineNum = 1;
+    var currentPageNumber = 1;
+    var skips = 0;
+    var pageNumber;
+    if (session.attributes.currentTitle) {
+        if (session.attributes.currentLine) {
+            lineNum = session.attributes.currentLine;
+            currentPageNumber = Math.ceil(lineNum / LINES);
+        }
+        //skip few pages
+        lineNum -= 4;
+        var bookTitle = session.attributes.currentTitle;
+        session.attributes.currentLine = lineNum;
+        response.shouldEndSession = false;
+        if (session.attributes.speed) {
+            s = session.attributes.speed;
+        }
+        else {
+            session.attributes.speed = s;
+        }
+
+        session.attributes.speed = s;
+        var speedValue = speeds[s];
+        readBookByName(request, response, session, bookTitle,speedValue);
+
+
+
+    }
+    else {
+        var db = require('bookReadAnimesh/DynamoInterface');
+        db.read(session.user.userId, callback);
+    }
+    function callback(value) {
+
+        if (value.Item) {
+            console.log('session retrieved from db');
+            var accessTokenHold = session.user.accessToken;
+
+            session.attributes = value.Item.session;
+            if (session._session) {
+                session = session._session;
+            }
+            //   session.user.accessToken=accessTokenHold;
+            if (session.attributes.currentTitle) {
+                var bookTitle = session.attributes.currentTitle;
+                session.attributes.currentLine = lineNum;
+                response.shouldEndSession = false;
+                readBookByName(request, response, session, bookTitle);
+            }
+
+        } else {
+            response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
+            response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
+            response.shouldEndSession = false;
+            response.done();
+        }
+    }
+
+
+}
 var limit = 5;
 
 function listFiles(response, session) {
@@ -574,9 +807,10 @@ function listFiles(response, session) {
     });
 
 }
-function readBookByName(request, response, session, booktitle) {
+
+function readBookByName(request, response, session, booktitle, speed) {
     var bookReader = require('bookReadAnimesh/bookReader');
-    bookReader.readWholeBook(session.user.accessToken, booktitle, request, response, session, ".txt", callback);
+    bookReader.readWholeBook(session.user.accessToken, booktitle, request, response, session, ".txt", callback, speed);
     function callback(sessionMod) {
         var db = require('bookReadAnimesh/DynamoInterface');
         db.create(session.user.userId, session.attributes, call);
@@ -586,9 +820,9 @@ function readBookByName(request, response, session, booktitle) {
         console.log('session saved? :' + data);
     }
 }
-function readFromChapter(chapterNumber, bookTitle, request, session, response) {
+function readFromChapter(chapterNumber, bookTitle, request, session, response, speed) {
     var bookReader = require('bookReadAnimesh/bookReader');
-    bookReader.readFromChapter(chapterNumber, session.user.accessToken, bookTitle, request, response, session, ".txt", callback);
+    bookReader.readFromChapter(chapterNumber, session.user.accessToken, bookTitle, request, response, session, ".txt", callback, speed);
     function callback(sessionMod) {
         var db = require('bookReadAnimesh/DynamoInterface');
         db.create(session.user.userId, session.attributes, call);
