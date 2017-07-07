@@ -332,7 +332,7 @@ intentHandlers['SkipPageIntent'] = function (request, session, response, slots) 
 
         } else {
             response.speechText += "Which book you want me to open? Say: Open, followed by the book name";
-            response.repromptText = "Which book you want me to open? Say: Open, followed by the book name";
+            response.repromptText = "Which book you want me to open? Say: Open, followed by the book name or Say, help ";
             response.shouldEndSession = false;
             response.done();
         }
@@ -346,7 +346,7 @@ intentHandlers['BookIntent'] = function (request, session, response, slots) {
         listFiles(response, session);
     }
     else {
-        response.speechText += "Looking for " + slots.BookTitle + ". ";
+        response.speechText += "Opening " + slots.BookTitle + ". At any time you can say, Skip Page to Skip current page. ";
         //response.speechText += "At any time you can say; skip page, to skip current page and go to next. "
         session.attributes.currentTitle = slots.BookTitle;
         response.shouldEndSession = false;
@@ -489,7 +489,7 @@ intentHandlers['SlowerIntent'] = function (request, session, response, slots) {
         s--;
         session.attributes.speed = s;
         var speedValue = speeds[s];
-        response.speechText+=`<prosody speed='${speedValue}'>Reading at ${speedValue} speed. </prosody>`;
+        response.speechText+=`<prosody rate=${speedValue}>Reading at ${speedValue} speed. </prosody>`;
         readBookByName(request, response, session, bookTitle, speedValue);
     }
     else {
@@ -511,7 +511,7 @@ intentHandlers['FasterIntent'] = function (request, session, response, slots) {
             s++;
         session.attributes.speed = s;
         var speedValue = speeds[s];
-        response.speechText+=`<prosody speed='${speedValue}'>Reading at ${speedValue} speed. </prosody>`;
+        response.speechText+=`<prosody rate=${speedValue}>Reading at ${speedValue} speed. </prosody>`;
         readBookByName(request, response, session, bookTitle, speedValue);
     }
     else {
